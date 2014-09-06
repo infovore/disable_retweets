@@ -1,5 +1,12 @@
 #!/usr/bin/env ruby
 require 'twitter'
+require 'dotenv'
+Dotenv.load
+
+unless ARGV[0]
+  puts "Usage: disable_rewtweets.rb [all|@user]"
+  exit
+end
 
 api_key             = ENV.fetch('TWITTER_API_KEY')
 api_secret          = ENV.fetch('TWITTER_API_SECRET')
@@ -26,12 +33,19 @@ def make_request(&block)
   end
 end
 
-pending_disable = make_request do
-  no_retweet_ids = client.no_retweet_ids
-  client.friends.to_a.reject { |f| no_retweet_ids.include?(f.id) }
-end
+if ARGV[0] == 'all'
+  pending_disable = make_request do
+    no_retweet_ids = client.no_retweet_ids
+    client.friends.to_a.reject { |f| no_retweet_ids.include?(f.id) }
+  end
 
-puts "Found #{pending_disable.length} users to disable RTs from"
+  puts "Found #{pending_disable.length} users to disable RTs from"
+else
+  screen_name = ARGV[0].strip.gsub("@", "")
+  pending_disable = make_request do
+    [client.user(screen_name)]
+  end
+end
 
 pending_disable.each do |friend|
   make_request do
